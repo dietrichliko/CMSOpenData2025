@@ -1,0 +1,36 @@
+[project]
+name = "cmsopendata"
+version = "0.1.0"
+description = "Data Replication for CMS OpenData 2025"
+readme = "README.md"
+authors = [
+    { name = "Dietrich Liko", email = "Dietrich.Liko@oeaw.ac.at" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "click>=8.3.1",
+    "rich>=14.2.0",
+    "rucio-clients>=39.0.0",
+    "sqlalchemy-state-machine>=1.11.0",
+    "sqlalchemy>=2.0.45",
+]
+
+[project.scripts]
+cmstool = "cmsopendata.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9.18,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+    "pytest>=9.0.2",
+    "ruff>=0.14.10",
+]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+plugins = ["sqlalchemy.ext.mypy.plugin"]
+
