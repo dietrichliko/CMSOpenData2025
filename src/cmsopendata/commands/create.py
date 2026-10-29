@@ -5,6 +5,7 @@ import pathlib
 from itertools import islice
 
 import click
+from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
 from cmsopendata.models import Base, Dataset, File, create_engine
@@ -87,7 +88,7 @@ async def load_dataset(
     dataset: str,
     verbose: bool,
     sem: asyncio.Semaphore,
-    engine: sqlalchemy.engine.Engine,
+    engine: Engine,
 ) -> None:
     if verbose:
         log.info(f"Loading dataset: {dataset}")
