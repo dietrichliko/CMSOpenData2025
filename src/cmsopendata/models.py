@@ -17,7 +17,12 @@ SUBSCRIBED = "subscribed"
 TRANSFERRED = "transferred"
 STUCK = "stuck"
 DONE = "done"
+RELEASED = "released"
 FAILED = "failed"
+
+# Statuses whose data still occupies space on the target RSE and therefore
+# count towards the subscribe size quota.
+OCCUPYING_STATUSES = [SUBSCRIBED, TRANSFERRED, STUCK, DONE]
 
 
 class Dataset(Base, StateMixin):
@@ -25,12 +30,13 @@ class Dataset(Base, StateMixin):
 
     state_config = StateConfig(
         initial=INITIALIZED,
-        states=[INITIALIZED, SUBSCRIBED, TRANSFERRED, STUCK, DONE, FAILED],
+        states=[INITIALIZED, SUBSCRIBED, TRANSFERRED, STUCK, DONE, RELEASED, FAILED],
         transitions=[
             ["set_subscribed", INITIALIZED, SUBSCRIBED],
             ["set_failed", INITIALIZED, FAILED],
             ["set_transferred", SUBSCRIBED, TRANSFERRED],
             ["set_done", TRANSFERRED, DONE],
+            ["set_released", DONE, RELEASED],
             ["set_failed", TRANSFERRED, FAILED],
             ["set_stuck", SUBSCRIBED, STUCK],
             ["clear", FAILED, INITIALIZED],

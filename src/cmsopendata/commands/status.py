@@ -14,15 +14,15 @@ log = logging.getLogger("cmsopendata")
 def human_readable_size(num_bytes: int) -> str:
     """Convert a number of bytes to a human readable string.
 
-    Uses 1024-based units and returns values like '512 B', '1.2 KB', '3.4 MB'.
+    Uses decimal units and returns values like '512 B', '1.2 KB', '3.4 MB'.
     """
     n = float(num_bytes)
     for unit in ("B", "KB", "MB", "GB", "TB", "PB"):
-        if n < 1024.0 or unit == "PB":
+        if n < 1000.0 or unit == "PB":
             if unit == "B":
                 return f"{int(n)} B"
             return f"{n:.1f} {unit}"
-        n /= 1024.0
+        n /= 1000.0
     # Fallback (shouldn't be reached because of the loop above)
     return f"{n:.1f} PB"
 
@@ -65,13 +65,27 @@ def command(ctx: click.Context, update: bool) -> None:
             log.info("No dataset statuses found")
         else:
             for state in used_states:
-                count = session.scalar(
-                    select(func.count())
+                count, size = session.execute(
+                    select(
+                        func.count(func.distinct(Dataset.__table__.c.id)),
+                        func.coalesce(func.sum(File.__table__.c.size), 0),
+                    )
                     .select_from(Dataset.__table__)
+                    .outerjoin(
+                        File.__table__,
+                        Dataset.__table__.c.id == File.__table__.c.dataset_id,
+                    )
                     .where(Dataset.__table__.c.status == state)
-                )
+                ).one()
+                readable_size = human_readable_size(int(size or 0))
                 state_label = state if state is not None else "NULL"
-                log.info("Datasets with status '%s': %d", state_label, int(count or 0))
+                log.info(
+                    "Datasets with status '%s': %d (size: %d bytes, %s)",
+                    state_label,
+                    int(count or 0),
+                    int(size or 0),
+                    readable_size,
+                )
         # count datasets using Core (no ORM object loading)
         total_files_count = session.scalar(
             select(func.count()).select_from(File.__table__)
@@ -88,16 +102,12 @@ def command(ctx: click.Context, update: bool) -> None:
             select(func.coalesce(func.sum(Dataset.__table__.c.stuck_cnt), 0))
         )
 
-        log.info(
-            "Total files with status OK (sum of ok_cnt): %d", int(total_ok_files or 0)
-        )
+        log.info("Total files with status OK (sum of ok_cnt): %d", int(total_ok_files or 0))
         log.info(
             "Total files replicating (sum of replicating_cnt): %d",
             int(total_replicating_files or 0),
         )
-        log.info(
-            "Total stuck files (sum of stuck_cnt): %d", int(total_stuck_files or 0)
-        )
+        log.info("Total stuck files (sum of stuck_cnt): %d", int(total_stuck_files or 0))
         # count datasets with non-zero ok/replicating/stuck counters (no ORM loading)
         ok_datasets_count = session.scalar(
             select(func.count())
